@@ -1,0 +1,328 @@
+\documentclass[a4paper]{article}\usepackage[]{graphicx}\usepackage[]{color}
+%% maxwidth is the original width if it is less than linewidth
+%% otherwise use linewidth (to make sure the graphics do not exceed the margin)
+\makeatletter
+\def\maxwidth{ %
+  \ifdim\Gin@nat@width>\linewidth
+    \linewidth
+  \else
+    \Gin@nat@width
+  \fi
+}
+\makeatother
+
+\definecolor{fgcolor}{rgb}{0.345, 0.345, 0.345}
+\newcommand{\hlnum}[1]{\textcolor[rgb]{0.686,0.059,0.569}{#1}}%
+\newcommand{\hlstr}[1]{\textcolor[rgb]{0.192,0.494,0.8}{#1}}%
+\newcommand{\hlcom}[1]{\textcolor[rgb]{0.678,0.584,0.686}{\textit{#1}}}%
+\newcommand{\hlopt}[1]{\textcolor[rgb]{0,0,0}{#1}}%
+\newcommand{\hlstd}[1]{\textcolor[rgb]{0.345,0.345,0.345}{#1}}%
+\newcommand{\hlkwa}[1]{\textcolor[rgb]{0.161,0.373,0.58}{\textbf{#1}}}%
+\newcommand{\hlkwb}[1]{\textcolor[rgb]{0.69,0.353,0.396}{#1}}%
+\newcommand{\hlkwc}[1]{\textcolor[rgb]{0.333,0.667,0.333}{#1}}%
+\newcommand{\hlkwd}[1]{\textcolor[rgb]{0.737,0.353,0.396}{\textbf{#1}}}%
+\let\hlipl\hlkwb
+
+\usepackage{framed}
+\makeatletter
+\newenvironment{kframe}{%
+ \def\at@end@of@kframe{}%
+ \ifinner\ifhmode%
+  \def\at@end@of@kframe{\end{minipage}}%
+  \begin{minipage}{\columnwidth}%
+ \fi\fi%
+ \def\FrameCommand##1{\hskip\@totalleftmargin \hskip-\fboxsep
+ \colorbox{shadecolor}{##1}\hskip-\fboxsep
+     % There is no \\@totalrightmargin, so:
+     \hskip-\linewidth \hskip-\@totalleftmargin \hskip\columnwidth}%
+ \MakeFramed {\advance\hsize-\width
+   \@totalleftmargin\z@ \linewidth\hsize
+   \@setminipage}}%
+ {\par\unskip\endMakeFramed%
+ \at@end@of@kframe}
+\makeatother
+
+\definecolor{shadecolor}{rgb}{.97, .97, .97}
+\definecolor{messagecolor}{rgb}{0, 0, 0}
+\definecolor{warningcolor}{rgb}{1, 0, 1}
+\definecolor{errorcolor}{rgb}{1, 0, 0}
+\newenvironment{knitrout}{}{} % an empty environment to be redefined in TeX
+
+\usepackage{alltt}
+
+%\VignetteIndexEntry{UsingTransPhylo}
+%\VignetteEngine{knitr::knitr}
+
+\usepackage{geometry}
+\geometry{tmargin=2.5cm,bmargin=2.5cm,lmargin=2.5cm,rmargin=2.5cm}
+
+\title{Tutorial introducing the R package TransPhylo}
+\author{Xavier Didelot}
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\begin{document}
+
+
+
+\maketitle
+
+\section*{Introduction}
+
+Welcome to this quick tutorial on TransPhylo. TransPhylo is a R package that can reconstruct infectious disease transmission using genomic data. The input is a dated phylogeny, where leaves correspond to pathogens sampled from the known infected hosts. The main output is a transmission tree which indicates who infected whom, including the potential existence of unsampled individuals who may have acted as missing transmission links. TransPhylo works by colouring the branches of the phylogeny using a separate colour for each host, sampled or not. Each section of the tree  coloured in a unique colour represents the pathogen evolution happening within a distinct host. Changes of colours on branches therefore correspond to transmission events from one host to another.
+
+In the first part of this tutorial we will simulate a dataset. In the second part we will analyse the dataset simulated in the first part. If you already have a dataset on which you want to apply TransPhylo you can skip the first part, although you might still find it useful to read as it introduces some of the concepts in our model.
+
+If you have not already done so, you can install TransPhylo using the following R command:
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{devtools}\hlopt{::}\hlkwd{install_github}\hlstd{(}\hlstr{'xavierdidelot/TransPhylo'}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+You should then be able to load TransPhylo using:
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{library}\hlstd{(}\hlstr{'TransPhylo'}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+Finally, if you want to reproduce exactly the same results as the ones shown in this tutorial, you should set the seed of your random number generator to the same as mine:
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{set.seed}\hlstd{(}\hlnum{0}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+\section{Simulation}
+
+A pathogen has an effective within-host population size of $N_e=100$ and a generation time $g=1$ day, so that $N_e g=100/365$ year. The offspring distribution is negative binomial with mean equal to the basic reproduction number $R=5$. Both the generation time and the sampling time are Gamma distributed with parameters (10,0.1) which has a mean of 1 year. The density of sampling is $\pi=0.25$. The following commands specify these parameters:
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{neg}\hlkwb{=}\hlnum{100}\hlopt{/}\hlnum{365}
+\hlstd{off.r}\hlkwb{=}\hlnum{5}
+\hlstd{w.shape}\hlkwb{=}\hlnum{10}
+\hlstd{w.scale}\hlkwb{=}\hlnum{0.1}
+\hlstd{pi}\hlkwb{=}\hlnum{0.25}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+We simulate an outbreak that starts in 2005 and which and is observed up to 2008:
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{simu} \hlkwb{<-} \hlkwd{simulateOutbreak}\hlstd{(}\hlkwc{neg}\hlstd{=neg,}\hlkwc{pi}\hlstd{=pi,}\hlkwc{off.r}\hlstd{=off.r,}\hlkwc{w.shape}\hlstd{=w.shape,}
+                         \hlkwc{w.scale}\hlstd{=w.scale,}\hlkwc{dateStartOutbreak}\hlstd{=}\hlnum{2005}\hlstd{,}\hlkwc{dateT}\hlstd{=}\hlnum{2008}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+This simulation contains both the transmission tree between infected hosts and the within-host phylogenetic tree of each host. This can be visualised as a colored phlogenetic tree, where each host is represented by a unique color:
+
+\begin{center}
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{plotCTree}\hlstd{(simu)}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=4in,height=4in]{/var/folders/w6/jq7n5xr958z9h9lr7gl9b7p8000gws/T//Rtmpj9T5spunnamed-chunk-7-1} 
+
+}
+
+
+
+\end{knitrout}
+\end{center}
+
+The transmission tree can be extracted and plotted separately from the phylogeny:
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{ttree}\hlkwb{<-}\hlkwd{extractTTree}\hlstd{(simu)}
+\hlkwd{plotTTree}\hlstd{(ttree,w.shape,w.scale)}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=4in,height=4in]{/var/folders/w6/jq7n5xr958z9h9lr7gl9b7p8000gws/T//Rtmpj9T5spunnamed-chunk-8-1} 
+
+}
+
+
+
+\end{knitrout}
+
+The phylogenetic tree can be extracted and converted into a phylo object from the ape package:
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{library}\hlstd{(ape)}
+\end{alltt}
+
+
+{\ttfamily\noindent\color{warningcolor}{\#\# Warning: package 'ape' was built under R version 3.4.2}}\begin{alltt}
+\hlstd{ptree}\hlkwb{<-}\hlkwd{extractPTree}\hlstd{(simu)}
+\hlstd{p}\hlkwb{<-}\hlkwd{phyloFromPTree}\hlstd{(ptree)}
+\hlkwd{plot}\hlstd{(p)}
+\hlkwd{axisPhylo}\hlstd{()}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=4in,height=4in]{/var/folders/w6/jq7n5xr958z9h9lr7gl9b7p8000gws/T//Rtmpj9T5spunnamed-chunk-9-1} 
+
+}
+
+
+
+\end{knitrout}
+
+Let us save this tree into a Newick file so that we can use it as input in the second part.
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{write.tree}\hlstd{(p,}\hlstr{'tree.nwk'}\hlstd{,}\hlkwc{append} \hlstd{= F)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+
+Note that this phylogeny is scaled in years, but time is measured only relatively to the 
+date of the last sample which is at 0 on the x-axis of the figure above. To use this tree
+in the second part we also need to know exactly when was the last sample taken:
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{print}\hlstd{(}\hlkwd{max}\hlstd{(simu}\hlopt{$}\hlstd{ctree[,}\hlnum{1}\hlstd{]))}
+\end{alltt}
+\begin{verbatim}
+## [1] 2007.964
+\end{verbatim}
+\end{kframe}
+\end{knitrout}
+
+\section{Inference of transmission tree given a phylogeny}
+
+This second part is independent from the first part, so we start by erasing the workspace and resetting the seed of the random number generator:
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{rm}\hlstd{(}\hlkwc{list}\hlstd{=}\hlkwd{ls}\hlstd{())}
+\hlkwd{set.seed}\hlstd{(}\hlnum{0}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+Our starting point is a timed phylogenetic tree such as the one created in the previous part and that we stored in the \verb+tree.nwk+ file. Because such a phylogeny is timed relatively and not absolutely, we also need to indicate when the last sample was taken, which in the simulation above was equal to 2007.964. However, if you are using your own dataset, you should set this equal to the date at which the last sample was taken.
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{ptree}\hlkwb{<-}\hlkwd{ptreeFromPhylo}\hlstd{(}\hlkwd{read.tree}\hlstd{(}\hlstr{'tree.nwk'}\hlstd{),}\hlkwc{dateLastSample}\hlstd{=}\hlnum{2007.964}\hlstd{)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+TransPhylo also needs to know the parameters of the Gamma distribution representing the generation time. In the simulation above we assumed that these parameters were equal to (10,0.1), and so this is what we specify below. However, if you are using your own data, you should set these values to something sensible for your pathogen of interest.
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{w.shape}\hlkwb{=}\hlnum{10}
+\hlstd{w.scale}\hlkwb{=}\hlnum{0.1}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+Finally TransPhylo needs to know the time at which observation of cases stopped. In the simulation above this was equal to 2008, and so this is what we specify below. However, if you are using your own data, you should set this equal to the date when observation stopped for your outbreak of interest. It might be today's date if you are doing a real-time genomic epidemiology investigation. It can even be set equal to \verb+Inf+ if you are confident that the outbreak is finished and that there will be no cases in the future, for example if you are analysing an old outbreak which is clearly finished.
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{dateT}\hlkwb{=}\hlnum{2008}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+The MCMC procedure to infer the transmission tree given the phylogenetic tree can be run as follows:
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{record}\hlkwb{<-}\hlkwd{inferTTree}\hlstd{(ptree,}\hlkwc{mcmcIterations}\hlstd{=}\hlnum{100}\hlstd{,}\hlkwc{w.shape}\hlstd{=w.shape,}\hlkwc{w.scale}\hlstd{=w.scale,}\hlkwc{dateT}\hlstd{=dateT)}
+\end{alltt}
+\end{kframe}
+\end{knitrout}
+
+This returns a record of all MCMC iterations. This is what the transmission tree looks like at the end of the MCMC:
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{lastIteration}\hlkwb{<-}\hlstd{record[[}\hlkwd{length}\hlstd{(record)]]}
+\hlkwd{plotCTree}\hlstd{(lastIteration}\hlopt{$}\hlstd{ctree)}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=4in,height=4in]{/var/folders/w6/jq7n5xr958z9h9lr7gl9b7p8000gws/T//Rtmpj9T5spunnamed-chunk-16-1} 
+
+}
+
+
+
+\end{knitrout}
+
+Traces of the MCMC can be plotted as follows:
+
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlkwd{par}\hlstd{(}\hlkwc{mfrow}\hlstd{=}\hlkwd{c}\hlstd{(}\hlnum{2}\hlstd{,}\hlnum{2}\hlstd{))}
+\hlkwd{plot}\hlstd{(}\hlkwd{sapply}\hlstd{(record,}\hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{) x}\hlopt{$}\hlstd{pTTree}\hlopt{+}\hlstd{x}\hlopt{$}\hlstd{pPTree),}\hlkwc{ylab}\hlstd{=}\hlstr{'Posterior probability'}\hlstd{,}
+     \hlkwc{xlab}\hlstd{=}\hlstr{'MCMC iterations'}\hlstd{,}\hlkwc{type}\hlstd{=}\hlstr{'l'}\hlstd{)}
+\hlkwd{plot}\hlstd{(}\hlkwd{sapply}\hlstd{(record,}\hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{) x}\hlopt{$}\hlstd{pi),}\hlkwc{ylab}\hlstd{=}\hlstr{'Sampling proportion pi'}\hlstd{,}
+     \hlkwc{xlab}\hlstd{=}\hlstr{'MCMC iterations'}\hlstd{,}\hlkwc{type}\hlstd{=}\hlstr{'l'}\hlstd{)}
+\hlkwd{plot}\hlstd{(}\hlkwd{sapply}\hlstd{(record,}\hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{) x}\hlopt{$}\hlstd{neg),}\hlkwc{ylab}\hlstd{=}\hlstr{'Within-host coalescent rate Ne*g'}\hlstd{,}
+     \hlkwc{xlab}\hlstd{=}\hlstr{'MCMC iterations'}\hlstd{,}\hlkwc{type}\hlstd{=}\hlstr{'l'}\hlstd{)}
+\hlkwd{plot}\hlstd{(}\hlkwd{sapply}\hlstd{(record,}\hlkwa{function}\hlstd{(}\hlkwc{x}\hlstd{) x}\hlopt{$}\hlstd{off.r),}\hlkwc{ylab}\hlstd{=}\hlstr{'Basic reproduction number R'}\hlstd{,}
+     \hlkwc{xlab}\hlstd{=}\hlstr{'MCMC iterations'}\hlstd{,}\hlkwc{type}\hlstd{=}\hlstr{'l'}\hlstd{)}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=4in,height=4in]{/var/folders/w6/jq7n5xr958z9h9lr7gl9b7p8000gws/T//Rtmpj9T5spunnamed-chunk-17-1} 
+
+}
+
+
+
+\end{knitrout}
+
+A consensus transmission tree can be built as follows:
+\begin{knitrout}
+\definecolor{shadecolor}{rgb}{0.969, 0.969, 0.969}\color{fgcolor}\begin{kframe}
+\begin{alltt}
+\hlstd{cons}\hlkwb{=}\hlkwd{consTTree}\hlstd{(record)}
+\hlkwd{plotTTree}\hlstd{(cons,w.shape,w.scale)}
+\end{alltt}
+\end{kframe}
+
+{\centering \includegraphics[width=4in,height=4in]{/var/folders/w6/jq7n5xr958z9h9lr7gl9b7p8000gws/T//Rtmpj9T5spunnamed-chunk-18-1} 
+
+}
+
+
+
+\end{knitrout}
+
+\end{document}
