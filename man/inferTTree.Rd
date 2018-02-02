@@ -9,7 +9,8 @@ inferTTree(ptree, w.shape = 2, w.scale = 1, ws.shape = w.shape,
   startNeg = 100/365, startOff.r = 1, startOff.p = 0.5, startPi = 0.5,
   updateNeg = TRUE, updateOff.r = TRUE, updateOff.p = FALSE,
   updatePi = TRUE, startCTree = NA, updateTTree = TRUE,
-  update.w.scale = FALSE, optiStart = TRUE, dateT = Inf)
+  update.w.scale = FALSE, update.w.shape = FALSE, optiStart = TRUE,
+  dateT = Inf, delta.t = 0.01)
 }
 \arguments{
 \item{ptree}{Phylogenetic tree}
@@ -48,9 +49,13 @@ inferTTree(ptree, w.shape = 2, w.scale = 1, ws.shape = w.shape,
 
 \item{update.w.scale}{Whether of not to update the parameter w.scale}
 
+\item{update.w.shape}{Whether of not to update the parameter w.shape}
+
 \item{optiStart}{Whether or not to optimise the MCMC start point}
 
 \item{dateT}{Date when process stops (this can be Inf for fully simulated outbreaks)}
+
+\item{delta.t}{Interval to calculate integral.}
 }
 \value{
 posterior sample set of transmission trees

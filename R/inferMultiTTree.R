@@ -22,7 +22,6 @@
 #' @param delta.t Interval to calculate integral.
 #' @return posterior sample set of transmission trees
 #' @export
-
 inferMultiTTree = function(ptree.list, w.shape=2, w.scale=1, ws.shape=w.shape, ws.scale=w.scale,
                       mcmcIterations=1000, thinning=1, startNeg=100/365, startOff.r=1,
                       startOff.p=0.5, startPi=0.5, updateNeg=TRUE, updateOff.r=TRUE,
@@ -53,7 +52,7 @@ inferMultiTTree = function(ptree.list, w.shape=2, w.scale=1, ws.shape=w.shape, w
   pTTree.list <- lapply(ttree.list, function(ttree) {
     probTTree(ttree$ttree,off.r,off.p,pi,w.shape,w.scale,ws.shape,ws.scale,dateT,delta.t)
   })
-  pPTree.list <- lapply(ctree.list, probPTreeGivenTTreectree,neg)
+  pPTree.list <- lapply(ctree.list, probPTreeGivenTTree, neg)
   pb <- txtProgressBar(min=0,max=mcmcIterations,style = 3)
   for (i in 1:mcmcIterations) {#Main MCMC loop
     if (i%%thinning == 0) {
@@ -61,8 +60,8 @@ inferMultiTTree = function(ptree.list, w.shape=2, w.scale=1, ws.shape=w.shape, w
       setTxtProgressBar(pb, i)
       #message(sprintf('it=%d,neg=%f,off.r=%f,off.p=%f,pi=%f,Prior=%e,Likelihood=%f,n=%d',i,neg,off.r,off.p,pi,pTTree,pPTree,nrow(extractTTree(ctree))))
       record[[i/thinning]]$ctree.list <- ctree.list
-      record[[i/thinning]]$pTTree <- sum(pTTree.list)
-      record[[i/thinning]]$pPTree <- sum(pPTree.list)
+      record[[i/thinning]]$pTTree <- Reduce("+",pTTree.list)
+      record[[i/thinning]]$pPTree <- Reduce("+",pPTree.list)
       record[[i/thinning]]$neg <- neg 
       record[[i/thinning]]$off.r <- off.r
       record[[i/thinning]]$off.p <- off.p
@@ -71,7 +70,7 @@ inferMultiTTree = function(ptree.list, w.shape=2, w.scale=1, ws.shape=w.shape, w
       record[[i/thinning]]$w.scale <- w.scale
       record[[i/thinning]]$ws.shape <- ws.shape
       record[[i/thinning]]$ws.scale <- ws.scale
-      record[[i/thinning]]$source <- lapply(ctree.list, function(ctree) {
+      record[[i/thinning]]$source.list <- lapply(ctree.list, function(ctree) {
         source <- ctree$ctree[ctree$ctree[which(ctree$ctree[,4]==0),2],4]
         if (source<=length(ctree$nam)) {
           source=ctree$nam[source] 
@@ -90,11 +89,11 @@ inferMultiTTree = function(ptree.list, w.shape=2, w.scale=1, ws.shape=w.shape, w
       ttree2 <- extractTTree(ctree2)
       pTTree2 <- probTTree(ttree2$ttree,off.r,off.p,pi,w.shape,w.scale,ws.shape,ws.scale,dateT,delta.t) 
       pPTree2 <- probPTreeGivenTTree(ctree2,neg) 
-      if (log(runif(1)) < log(prop$qr)+ pTTree2 + pPTree2 - pTTree.list[tree.to.move] - pPTree.list[tree.to.move])  { 
-        ctree.list[tree.to.move] <- ctree2
-        ttree.list[tree.to.move] <- ttree2
-        pTTree.list[tree.to.move] <- pTTree2 
-        pPTree.list[tree.to.move] <- pPTree2 
+      if (log(runif(1)) < log(prop$qr)+ pTTree2 + pPTree2 - pTTree.list[[tree.to.move]] - pPTree.list[[tree.to.move]])  { 
+        ctree.list[[tree.to.move]] <- ctree2
+        ttree.list[[tree.to.move]] <- ttree2
+        pTTree.list[[tree.to.move]] <- pTTree2 
+        pPTree.list[[tree.to.move]] <- pPTree2 
       } 
     }
     
@@ -102,7 +101,7 @@ inferMultiTTree = function(ptree.list, w.shape=2, w.scale=1, ws.shape=w.shape, w
       #Metropolis update for Ne*g, assuming Exp(1) prior 
       neg2 <- abs(neg + (runif(1)-0.5)*0.5)
       pPTree2.list <- lapply(ctree.list, probPTreeGivenTTree, neg2)
-      if (log(runif(1)) < sum(pPTree2.list)-sum(pPTree.list)-neg2+neg)  {
+      if (log(runif(1)) < Reduce("+",pPTree2.list)-Reduce("+",pPTree.list)-neg2+neg)  {
         neg <- neg2
         pPTree.list <- pPTree2.list
         } 
@@ -115,7 +114,7 @@ inferMultiTTree = function(ptree.list, w.shape=2, w.scale=1, ws.shape=w.shape, w
       pTTree2.list <- lapply(ttree.list, function(ttree) {
         probTTree(ttree$ttree,off.r,off.p,pi,w.shape,w.scale.2,ws.shape,ws.scale,dateT,delta.t)
       })
-      if (log(runif(1)) < sum(pTTree2.list)-sum(pTTree.list)+shifted_gamma_prior(w.scale.2)-shifted_gamma_prior(w.scale)) {
+      if (log(runif(1)) < Reduce("+",pTTree2.list)-Reduce("+",pTTree.list)+shifted_gamma_prior(w.scale.2)-shifted_gamma_prior(w.scale)) {
         w.scale <- w.scale.2
         pTTree.list <- pTTree2.list
       }
@@ -128,7 +127,7 @@ inferMultiTTree = function(ptree.list, w.shape=2, w.scale=1, ws.shape=w.shape, w
       pTTree2.list <- lapply(ttree.list, function(ttree){
         probTTree(ttree$ttree,off.r,off.p,pi,w.shape.2,w.scale,ws.shape,ws.scale,dateT,delta.t)
       })
-      if (log(runif(1)) < sum(pTTree2.list)-sum(pTTree.list)+shifted_gamma_prior(w.shape.2)-shifted_gamma_prior(w.shape)) {
+      if (log(runif(1)) < Reduce("+",pTTree2.list)-Reduce("+",pTTree.list)+shifted_gamma_prior(w.shape.2)-shifted_gamma_prior(w.shape)) {
         w.shape <- w.shape.2
         pTTree.list <- pTTree2.list
       }
@@ -140,7 +139,7 @@ inferMultiTTree = function(ptree.list, w.shape=2, w.scale=1, ws.shape=w.shape, w
       pTTree2.list <- lapply(ttree.list, function(ttree){
         probTTree(ttree$ttree,off.r2,off.p,pi,w.shape,w.scale,ws.shape,ws.scale,dateT,delta.t)
       })
-      if (log(runif(1)) < sum(pTTree2.list)-sum(pTTree.list)-off.r2+off.r)  {
+      if (log(runif(1)) < Reduce("+",pTTree2.list)-Reduce("+",pTTree.list)-off.r2+off.r)  {
         off.r <- off.r2
         pTTree.list <- pTTree2.list
         }
@@ -167,7 +166,7 @@ inferMultiTTree = function(ptree.list, w.shape=2, w.scale=1, ws.shape=w.shape, w
       pTTree2.list <- lapply(ttree.list, function(ttree){
         probTTree(ttree$ttree,off.r,off.p,pi2,w.shape,w.scale,ws.shape,ws.scale,dateT,delta.t)
       })
-      if (log(runif(1)) < sum(pTTree2.list)-sum(pTTree.list))  {
+      if (log(runif(1)) < Reduce("+",pTTree2.list)-Reduce("+",pTTree.list))  {
         pi <- pi2
         pTTree.list <- pTTree2.list
         }

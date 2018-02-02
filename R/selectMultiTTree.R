@@ -10,6 +10,7 @@ selectMultiTTree = function(record,burnin=0.5)
   indexes <- lapply(1:n.trees, function(i){
     for (j in 1:length(record)){
       record[[j]]$ctree <- record[[j]]$ctree.list[[i]]
+      record[[j]]$source <- record[[j]]$source.list[[i]]
     }
     TransPhylo::selectTTree(record,burnin=burnin)
   })
