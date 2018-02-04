@@ -31,12 +31,17 @@ inferMultiTTree = function(ptree.list, w.shape=2, w.scale=1, ws.shape=w.shape, w
   
   if (update.w.scale && updatePi) stop("Error: can not estimate pi and w.scale simultaneously.")
   
-  for (ptree in ptree.list){
+  ptree.list <- lapply(ptree.list, function(ptree){
     ptree$ptree[,1]=ptree$ptree[,1]+runif(nrow(ptree$ptree))*1e-10#Ensure that all leaves have unique times
-    for (i in (ceiling(nrow(ptree$ptree)/2)+1):nrow(ptree$ptree)) for (j in 2:3) 
-      if (ptree$ptree[ptree$ptree[i,j],1]-ptree$ptree[i,1]<0) 
-        stop("The phylogenetic tree contains negative branch lengths!")
-  }
+    for (i in (ceiling(nrow(ptree$ptree)/2)+1):nrow(ptree$ptree)){
+      for (j in 2:3) {
+        if (ptree$ptree[ptree$ptree[i,j],1]-ptree$ptree[i,1]<0) 
+          stop("The phylogenetic tree contains negative branch lengths!")
+      }
+    }
+    return(ptree)
+  })
+
   
   #MCMC algorithm
   neg <- startNeg
@@ -44,15 +49,15 @@ inferMultiTTree = function(ptree.list, w.shape=2, w.scale=1, ws.shape=w.shape, w
   off.p <- startOff.p
   pi <- startPi
   ctree.list <- lapply(ptree.list, function(ptree){
-    makeCtreeFromPTree(ptree,ifelse(optiStart,off.r,NA),off.p,neg,pi,w.shape,w.scale,ws.shape,ws.scale,dateT)#Starting point 
+    TransPhylo:::makeCtreeFromPTree(ptree,ifelse(optiStart,off.r,NA),off.p,neg,pi,w.shape,w.scale,ws.shape,ws.scale,dateT)#Starting point 
   })
 
   ttree.list <- lapply(ctree.list, extractTTree)
   record <- vector('list',mcmcIterations/thinning)
   pTTree.list <- lapply(ttree.list, function(ttree) {
-    probTTree(ttree$ttree,off.r,off.p,pi,w.shape,w.scale,ws.shape,ws.scale,dateT,delta.t)
+    TransPhylo:::probTTree(ttree$ttree,off.r,off.p,pi,w.shape,w.scale,ws.shape,ws.scale,dateT,delta.t)
   })
-  pPTree.list <- lapply(ctree.list, probPTreeGivenTTree, neg)
+  pPTree.list <- lapply(ctree.list, TransPhylo:::probPTreeGivenTTree, neg)
   pb <- txtProgressBar(min=0,max=mcmcIterations,style = 3)
   for (i in 1:mcmcIterations) {#Main MCMC loop
     if (i%%thinning == 0) {
@@ -84,11 +89,11 @@ inferMultiTTree = function(ptree.list, w.shape=2, w.scale=1, ws.shape=w.shape, w
     if (updateTTree) {
       tree.to.move <- sample.int(length(ctree.list),1)
       #Metropolis update for transmission tree
-      prop <- proposal(ctree.list[[tree.to.move]]$ctree) 
-      ctree2 <- list(ctree=prop$tree,nam=ctree.list[[tree.to.move]]$nam)
-      ttree2 <- extractTTree(ctree2)
-      pTTree2 <- probTTree(ttree2$ttree,off.r,off.p,pi,w.shape,w.scale,ws.shape,ws.scale,dateT,delta.t) 
-      pPTree2 <- probPTreeGivenTTree(ctree2,neg) 
+      prop <- TransPhylo:::proposal(ctree.list[[tree.to.move]]$ctree) 
+      ctree2 <- list(ctree=prop$tree, nam=ctree.list[[tree.to.move]]$nam)
+      ttree2 <- TransPhylo:::extractTTree(ctree2)
+      pTTree2 <- TransPhylo:::probTTree(ttree2$ttree,off.r,off.p,pi,w.shape,w.scale,ws.shape,ws.scale,dateT,delta.t) 
+      pPTree2 <- TransPhylo:::probPTreeGivenTTree(ctree2,neg) 
       if (log(runif(1)) < log(prop$qr)+ pTTree2 + pPTree2 - pTTree.list[[tree.to.move]] - pPTree.list[[tree.to.move]])  { 
         ctree.list[[tree.to.move]] <- ctree2
         ttree.list[[tree.to.move]] <- ttree2
@@ -100,7 +105,7 @@ inferMultiTTree = function(ptree.list, w.shape=2, w.scale=1, ws.shape=w.shape, w
     if (updateNeg) {
       #Metropolis update for Ne*g, assuming Exp(1) prior 
       neg2 <- abs(neg + (runif(1)-0.5)*0.5)
-      pPTree2.list <- lapply(ctree.list, probPTreeGivenTTree, neg2)
+      pPTree2.list <- lapply(ctree.list, TransPhylo:::probPTreeGivenTTree, neg2)
       if (log(runif(1)) < Reduce("+",pPTree2.list)-Reduce("+",pPTree.list)-neg2+neg)  {
         neg <- neg2
         pPTree.list <- pPTree2.list
@@ -112,7 +117,7 @@ inferMultiTTree = function(ptree.list, w.shape=2, w.scale=1, ws.shape=w.shape, w
       w.scale.2 <- abs(w.scale + (runif(1)-0.5)*0.5)
       if (w.scale.2<0.01) w.scale.2=0.02-w.scale.2
       pTTree2.list <- lapply(ttree.list, function(ttree) {
-        probTTree(ttree$ttree,off.r,off.p,pi,w.shape,w.scale.2,ws.shape,ws.scale,dateT,delta.t)
+        TransPhylo:::probTTree(ttree$ttree,off.r,off.p,pi,w.shape,w.scale.2,ws.shape,ws.scale,dateT,delta.t)
       })
       if (log(runif(1)) < Reduce("+",pTTree2.list)-Reduce("+",pTTree.list)+shifted_gamma_prior(w.scale.2)-shifted_gamma_prior(w.scale)) {
         w.scale <- w.scale.2
@@ -125,7 +130,7 @@ inferMultiTTree = function(ptree.list, w.shape=2, w.scale=1, ws.shape=w.shape, w
       w.shape.2 <- abs(w.shape + (runif(1)-0.5)*0.5)
       if (w.shape.2<0.01) w.shape.2=0.02-w.shape.2
       pTTree2.list <- lapply(ttree.list, function(ttree){
-        probTTree(ttree$ttree,off.r,off.p,pi,w.shape.2,w.scale,ws.shape,ws.scale,dateT,delta.t)
+        TransPhylo:::probTTree(ttree$ttree,off.r,off.p,pi,w.shape.2,w.scale,ws.shape,ws.scale,dateT,delta.t)
       })
       if (log(runif(1)) < Reduce("+",pTTree2.list)-Reduce("+",pTTree.list)+shifted_gamma_prior(w.shape.2)-shifted_gamma_prior(w.shape)) {
         w.shape <- w.shape.2
@@ -137,7 +142,7 @@ inferMultiTTree = function(ptree.list, w.shape=2, w.scale=1, ws.shape=w.shape, w
       #Metropolis update for off.r, assuming prior exp(1)  
       off.r2 <- abs(off.r + (runif(1)-0.5)*0.5)
       pTTree2.list <- lapply(ttree.list, function(ttree){
-        probTTree(ttree$ttree,off.r2,off.p,pi,w.shape,w.scale,ws.shape,ws.scale,dateT,delta.t)
+        TransPhylo:::probTTree(ttree$ttree,off.r2,off.p,pi,w.shape,w.scale,ws.shape,ws.scale,dateT,delta.t)
       })
       if (log(runif(1)) < Reduce("+",pTTree2.list)-Reduce("+",pTTree.list)-off.r2+off.r)  {
         off.r <- off.r2
@@ -150,7 +155,7 @@ inferMultiTTree = function(ptree.list, w.shape=2, w.scale=1, ws.shape=w.shape, w
       off.p2 <- abs(off.p + (runif(1)-0.5)*0.1)
       if (off.p2>1) off.p2=2-off.p2
       pTTree2.list <- lapply(ttree.list, function(ttree) {
-        probTTree(ttree$ttree,off.r,off.p2,pi,w.shape,w.scale,ws.shape,ws.scale,dateT,delta.t)
+        TransPhylo:::probTTree(ttree$ttree,off.r,off.p2,pi,w.shape,w.scale,ws.shape,ws.scale,dateT,delta.t)
       })
       if (log(runif(1)) < pTTree2-pTTree)  {
         off.p <- off.p2
@@ -164,7 +169,7 @@ inferMultiTTree = function(ptree.list, w.shape=2, w.scale=1, ws.shape=w.shape, w
       if (pi2<0.01) pi2=0.02-pi2
       if (pi2>1) pi2=2-pi2
       pTTree2.list <- lapply(ttree.list, function(ttree){
-        probTTree(ttree$ttree,off.r,off.p,pi2,w.shape,w.scale,ws.shape,ws.scale,dateT,delta.t)
+        TransPhylo:::probTTree(ttree$ttree,off.r,off.p,pi2,w.shape,w.scale,ws.shape,ws.scale,dateT,delta.t)
       })
       if (log(runif(1)) < Reduce("+",pTTree2.list)-Reduce("+",pTTree.list))  {
         pi <- pi2
