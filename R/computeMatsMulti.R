@@ -12,7 +12,9 @@ computeMatWIWMulti = function(record,burnin=0.5)
       record[[j]]$ctree <- record[[j]]$ctree.list[[i]]
       record[[j]]$source <- record[[j]]$source.list[[i]]
     }
-    TransPhylo::computeMatWIW(record, burnin=burnin)
+    m <- TransPhylo::computeMatWIW(record, burnin=burnin)
+    colnames(m) <- rownames(m) <- record[[j]]$ctree$nam
+    return(m)
   })
   names(mat.wiws) <- 1:n.trees
   
@@ -41,7 +43,9 @@ computeMatTDistMulti = function(record,burnin=0.5)
       record[[j]]$ctree <- record[[j]]$ctree.list[[i]]
       record[[j]]$source <- record[[j]]$source.list[[i]]
     }
-    TransPhylo::computeMatTDist(record, burnin=burnin)
+    m <- TransPhylo::computeMatTDist(record, burnin=burnin)
+    colnames(m) <- rownames(m) <- record[[j]]$ctree$nam
+    return(m)
   })
   names(mat.tdists) <- 1:n.trees
   
