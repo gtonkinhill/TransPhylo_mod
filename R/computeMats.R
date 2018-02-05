@@ -10,8 +10,7 @@ computeMatWIW = function(record,burnin=0.5)
   m=length(record)
   n=sum(record[[1]]$ctree$ctree[,2]==0&record[[1]]$ctree$ctree[,3]==0) #Number of sampled individuals
   mat=matrix(0,n,n)
-  colnames(mat)<-record[[1]]$ctree$nam
-  rownames(mat)<-record[[1]]$ctree$nam
+  colnames(mat) <- rownames(mat) <- record[[1]]$ctree$nam
   
   for (i in 1:length(record))
   {
@@ -38,8 +37,7 @@ computeMatTDist = function(record,burnin=0.5)
   m=length(record)
   n=sum(record[[1]]$ctree$ctree[,2]==0&record[[1]]$ctree$ctree[,3]==0) #Number of sampled individuals
   mat=matrix(0,n,n)
-  colnames(mat)<-substr(record[[1]]$ctree$nam,3,4)
-  rownames(mat)<-substr(record[[1]]$ctree$nam,3,4)
+  rownames(mat) <- colnames(mat) <- record[[1]]$ctree$nam
   
   for (i in 1:length(record))
   {
