@@ -157,7 +157,7 @@ inferMultiTTree = function(ptree.list, w.shape=2, w.scale=1, ws.shape=w.shape, w
       pTTree2.list <- lapply(ttree.list, function(ttree) {
         TransPhylo:::probTTree(ttree$ttree,off.r,off.p2,pi,w.shape,w.scale,ws.shape,ws.scale,dateT,delta.t)
       })
-      if (log(runif(1)) < pTTree2-pTTree)  {
+      if (log(runif(1)) < Reduce("+",pTTree2.list)-Reduce("+",pTTree.list))  {
         off.p <- off.p2
         pTTree.list <- pTTree2.list
         }
