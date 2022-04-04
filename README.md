@@ -1,7 +1,5 @@
 # TransPhylo
 
-# Introduction
-
 This is a modified version of [TransPhylo](https://github.com/xavierdidelot/TransPhylo), a software package that can reconstruct infectious disease transmission chains using genomic data. This version allows for the estimation of the Generation time parameter if the sampling proportion (π) is known. It is now many commits behind the main TransPhylo package and should be used with care.
 
 
