@@ -13,7 +13,7 @@ http://dx.doi.org/10.1093/molbev/msw275
 
 You can install TransPhylo mod in R using the following command:
 
-`devtools::install_github("gtonkinhill/TransPhylo_mod", auth_token="37064ad364627e23377a492cf790285642256a23")`
+`devtools::install_github("gtonkinhill/TransPhylo_mod")`
 
 # Documentation
 
