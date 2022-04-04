@@ -2,17 +2,14 @@
 
 # Introduction
 
-This is a modified version of TransPhylo, a software package that can reconstruct infectious disease transmission using genomic data. The input is a dated phylogeny, where leaves correspond to pathogens sampled from the known infected hosts. The main output is a transmission tree which indicates who infected whom, including the potential existence of unsampled individuals who may have acted as missing transmission links. TransPhylo works by colouring the branches of the phylogeny using a separate colour for each host, sampled or not. Each section of the tree  coloured in a unique colour represents the pathogen evolution happening within a distinct host. Changes of colours on branches therefore correspond to transmission events from one host to another.
+This is a modified version of [TransPhylo](https://github.com/xavierdidelot/TransPhylo), a software package that can reconstruct infectious disease transmission chains using genomic data. This version allows for the estimation of the Generation time parameter if the sampling proportion (π) is known. It is now many commits behind the main TransPhylo package and should be used with care.
 
-For example, in the tree below, the outbreak started with the unsampled host 8, who transmitted to sampled host 4, who transmitted to unsampled host 3, who transmitted to both sampled hosts 1 and 2. Host 8 also transmitted to unsampled host 7 who transmitted to both sampled hosts 5 and 6.
 
-<img src="https://raw.githubusercontent.com/wiki/xavierdidelot/TransPhylo/example.png" width="300">
+For a description of TransPhylo, see the following article:
 
-For a more formal description of TransPhylo, see the following preprint:
-
-Didelot, Fraser, Gardy and Colijn (2016)
+Didelot, Fraser, Gardy and Colijn (2017)
 Genomic infectious disease epidemiology in partially sampled and ongoing outbreaks
-http://biorxiv.org/content/early/2016/07/22/065334
+http://dx.doi.org/10.1093/molbev/msw275
 
 # Installation
 
